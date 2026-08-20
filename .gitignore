@@ -1,0 +1,27 @@
+# --- Python Virtual Environments ---
+venv/
+env/
+.env/
+.venv/
+
+# --- Python Byte-compiled Files ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Project-Specific Data (CRITICAL) ---
+# Do not upload heavy biological datasets to GitHub
+data/
+*.edf
+*.h5
+*.csv
+
+# --- IDEs and Editor Files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs and Caches ---
+*.log
+.pytest_cache/
