@@ -27,29 +27,25 @@ def train_svm(X_train: np.ndarray, y_train: np.ndarray, kernel: str = 'rbf', C: 
     return svm_model
 
 
+
+from src.models.evaluate import cross_validate_model
+# Ensure your build_random_forest and build_svm functions are imported or defined above
+
 if __name__ == "__main__":
-    from sklearn.datasets import make_classification
-    from sklearn.model_selection import train_test_split
-    from src.models.balancing import balance_classes
-    from src.models.evaluate import evaluate_classifier
-
-    # Generate synthetic 4-class imbalanced data
-    X, y = make_classification(
-        n_samples=1000, n_features=20, n_informative=15, 
-        n_classes=4, weights=[0.1, 0.2, 0.3, 0.4], random_state=42
-    )
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # 1. Balance training data
-    X_train_res, y_train_res = balance_classes(X_train, y_train)
-
-    # 2. Train baseline models
-    rf = train_random_forest(X_train_res, y_train_res)
-    svm = train_svm(X_train_res, y_train_res)
-
-    # 3. Evaluate
-    evaluate_classifier(rf, X_test, y_test, model_name="Random Forest")
-    evaluate_classifier(svm, X_test, y_test, model_name="Support Vector Machine (RBF)")
-
+    print("Loading real EEG features...")
+    # Updated paths matching Muthuram's output
+    X = np.load('data/processed/X_features.npy')
+    y = np.load('data/processed/y_labels.npy')
     
+    print(f"Dataset shape: {X.shape}")
+    
+    # Initialize empty baseline models (the cross_validator handles the .fit() step)
+    rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+    svm_model = SVC(kernel='rbf', C=1.0, random_state=42)
+    
+    # Run strict k-fold cross-validation
+    print("\n--- Evaluating Random Forest ---")
+    cross_validate_model(rf_model, X, y)
+    
+    print("\n--- Evaluating SVM ---")
+    cross_validate_model(svm_model, X, y)
