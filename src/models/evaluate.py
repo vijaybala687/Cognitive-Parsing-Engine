@@ -1,22 +1,27 @@
-from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import accuracy_score
 
-# Map targets to human-readable motor imagery classes
-CLASS_NAMES = [
-    "Left-hand imagery",
-    "Right-hand imagery",
-    "Both-hands imagery",
-    "Both-feet imagery"
-]
-
-def evaluate_classifier(model, X_test: np.ndarray, y_test: np.ndarray, model_name: str = "Classifier"):
+def cross_validate_model(model, X: np.ndarray, y: np.ndarray, n_splits: int = 5):
     """
-    Computes and prints standard classification metrics and confusion matrix.
+    Evaluates the model using Stratified K-Fold cross-validation to prevent data leakage.
     """
-    predictions = model.predict(X_test)
+    print(f"\n--- Starting {n_splits}-Fold Cross Validation ---")
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    fold_accuracies = []
     
-    print(f"\n==================== {model_name} Evaluation ====================")
-    print(classification_report(y_test, predictions, target_names=CLASS_NAMES, zero_division=0))
-    print("Confusion Matrix:")
-    print(confusion_matrix(y_test, predictions))
-    print("=" * 60)
+    for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), 1):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+        
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        acc = accuracy_score(y_test, predictions)
+        fold_accuracies.append(acc)
+        print(f"Fold {fold}: Accuracy = {acc:.4f}")
+        
+    mean_acc = np.mean(fold_accuracies)
+    std_acc = np.std(fold_accuracies)
+    print(f"Overall Cross-Validation Accuracy: {mean_acc:.4f} (+/- {std_acc:.4f})")
+    
+    return mean_acc, std_acc
