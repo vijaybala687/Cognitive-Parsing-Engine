@@ -1,0 +1,15 @@
+.main-layout{
+
+    display:grid;
+
+    grid-template-columns:280px 1fr 300px;
+
+    gap:20px;
+
+    padding:20px;
+
+    min-height:calc(100vh - 100px);
+
+    align-items:start;
+
+}
