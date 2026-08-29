@@ -1,0 +1,147 @@
+.predictionPanel{
+
+    height:560px;
+
+    background:#191b2f;
+
+    border-radius:20px;
+
+    padding:18px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:12px;
+
+}
+
+.predictionPanel h2{
+
+    color:white;
+
+    font-size:20px;
+
+    margin-bottom:6px;
+
+}
+
+.prediction-card{
+
+    background:rgba(255,255,255,.05);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    border-radius:14px;
+
+    padding:14px;
+
+    transition:.3s;
+
+}
+
+.prediction-card:hover{
+
+    border-color:#6C7BFF;
+
+    box-shadow:0 0 18px rgba(108,123,255,.25);
+
+}
+
+.prediction-card span{
+
+    color:#9da5c5;
+
+    font-size:12px;
+
+}
+
+.prediction-card h1{
+
+    margin-top:6px;
+
+    color:white;
+
+    font-size:22px;
+
+}
+
+/* ===========================
+   Model Testing Section
+=========================== */
+
+.testing-panel{
+
+    margin-top:6px;
+
+    padding-top:12px;
+
+    border-top:1px solid rgba(255,255,255,.08);
+
+}
+
+.testing-panel h3{
+
+    color:white;
+
+    font-size:16px;
+
+    margin-bottom:12px;
+
+}
+
+.button-grid{
+
+    display:grid;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:10px;
+
+}
+
+.button-grid button{
+
+    padding:10px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#2b3157;
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+}
+
+.button-grid button:hover{
+
+    background:#6C7BFF;
+
+    transform:translateY(-2px);
+
+    box-shadow:0 0 16px rgba(108,123,255,.35);
+
+}
+
+.reset-btn{
+
+    grid-column:span 2;
+
+    background:#3a4066 !important;
+
+}
+
+.reset-btn:hover{
+
+    background:#ff5d73 !important;
+
+}

@@ -1,0 +1,30 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+
+font-family:
+Inter,
+Segoe UI,
+sans-serif;
+
+background:
+
+radial-gradient(circle at top,#1b2442,#0a0f20 70%);
+
+color:white;
+
+overflow-y:auto;
+overflow-x:hidden;
+
+}
+
+#root{
+
+width:100vw;
+height:100vh;
+
+}
