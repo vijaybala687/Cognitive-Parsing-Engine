@@ -1,72 +1,47 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./CursorArena.css";
-import { getFakePrediction } from "../../services/eegService";
 
-function CursorArena() {
-  // Cursor Position
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-  });
+const EASING_FACTOR = 0.2;
 
-  // Current Prediction
-  const [prediction, setPrediction] = useState("CENTER");
-
-  // Confidence
-  const [confidence, setConfidence] = useState(98);
+function CursorArena({ prediction = "CENTER", confidence = 0, targetPos = [320, 280] }) {
+  const [position, setPosition] = useState([320, 280]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const data = getFakePrediction();
+    let animationFrameId;
+    let currentPos = [...position];
 
-      setPrediction(data.movement);
-      setConfidence(data.confidence);
+    const animate = () => {
+      // Smooth interpolation towards target position
+      currentPos[0] += (targetPos[0] - currentPos[0]) * EASING_FACTOR;
+      currentPos[1] += (targetPos[1] - currentPos[1]) * EASING_FACTOR;
 
-      switch (data.movement) {
-        case "LEFT":
-          setPosition({ x: -120, y: 0 });
-          break;
+      setPosition([...currentPos]);
 
-        case "RIGHT":
-          setPosition({ x: 120, y: 0 });
-          break;
+      animationFrameId = requestAnimationFrame(animate);
+    };
 
-        case "UP":
-          setPosition({ x: 0, y: -120 });
-          break;
+    animationFrameId = requestAnimationFrame(animate);
 
-        case "DOWN":
-          setPosition({ x: 0, y: 120 });
-          break;
-
-        default:
-          setPosition({ x: 0, y: 0 });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [targetPos]);
 
   return (
     <section className="arena-wrapper">
       <div className="arena-header">
         <h2>Cursor Control Arena</h2>
 
-        <div className="prediction-pill">
-          Live Prediction
-        </div>
+        <div className="prediction-pill">Live Prediction</div>
       </div>
 
       <div className="arena">
-        {/* Center Cross */}
         <div className="cross horizontal"></div>
         <div className="cross vertical"></div>
 
-        {/* Cursor */}
         <div
           className="cursor"
           style={{
-            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+            left: `${position[0]}px`,
+            top: `${position[1]}px`,
           }}
         >
           <div className="cursor-core"></div>
