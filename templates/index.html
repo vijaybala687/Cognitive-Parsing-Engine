@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Parsing Engine - Clinical Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #050b14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .panel { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        #cursor { transition: left 0.35s ease-out, top 0.35s ease-out; }
+        
+        /* Topographical Brain Map Styles */
+        .head-model { width: 140px; height: 160px; border: 2px solid #334155; border-radius: 50% 50% 45% 45%; position: relative; margin: 0 auto; }
+        .node { width: 14px; height: 14px; background: #334155; border-radius: 50%; position: absolute; transform: translate(-50%, -50%); transition: all 0.3s ease; }
+        .node-c3 { top: 40%; left: 30%; } /* Left Hemisphere */
+        .node-cz { top: 40%; left: 50%; } /* Center */
+        .node-c4 { top: 40%; left: 70%; } /* Right Hemisphere */
+        .node-pz { top: 70%; left: 50%; } /* Parietal */
+        .active-node { background: #ef4444; box-shadow: 0 0 15px #ef4444, 0 0 30px #ef4444; border: 2px solid white; scale: 1.2; }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 overflow-hidden">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center px-4 mb-4">
+        <h1 class="text-2xl font-black tracking-tight text-blue-500">COGNITIVE <span class="text-slate-100">PARSING ENGINE</span></h1>
+        <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-slate-400">SESSION ACCURACY: <span id="stat-acc" class="text-emerald-400">0.0%</span></span>
+            <span class="text-sm font-bold text-slate-400">TRIALS: <span id="stat-trials" class="text-white">0</span></span>
+            <span id="ws-status" class="px-3 py-1 text-xs font-bold rounded bg-red-950 text-red-500 border border-red-800">DISCONNECTED</span>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0">
+        
+        <!-- COLUMN 1: Controls & Brain Map (Span 3) -->
+        <div class="col-span-3 flex flex-col gap-4">
+            <div class="panel p-5 flex-1">
+                <h2 class="text-xs font-bold text-slate-400 mb-4 tracking-widest uppercase">Motor Cortex Topology</h2>
+                <div class="head-model mb-4 bg-slate-900/50">
+                    <div id="n-c3" class="node node-c3"></div>
+                    <div id="n-cz" class="node node-cz"></div>
+                    <div id="n-c4" class="node node-c4"></div>
+                    <div id="n-pz" class="node node-pz"></div>
+                    <!-- Nose Indicator -->
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 border-l-8 border-r-8 border-b-[12px] border-l-transparent border-r-transparent border-b-[#334155]"></div>
+                </div>
+                <p id="cortex-desc" class="text-center text-xs font-semibold text-slate-500 min-h-[32px]">Awaiting EEG Injection...</p>
+            </div>
+
+            <div class="panel p-5">
+                <h2 class="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">Data Injection Matrix</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <div></div>
+                    <button onclick="cmd('INJECT_UP')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-2 rounded text-xs transition active:scale-95">▲ UP</button>
+                    <div></div>
+                    <button onclick="cmd('INJECT_LEFT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-2 rounded text-xs transition active:scale-95">◀ LFT</button>
+                    <button onclick="cmd('RESET')" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-2 rounded text-[10px] transition active:scale-95">RST</button>
+                    <button onclick="cmd('INJECT_RIGHT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-2 rounded text-xs transition active:scale-95">RGT ▶</button>
+                    <div></div>
+                    <button onclick="cmd('INJECT_DOWN')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-2 rounded text-xs transition active:scale-95">▼ DWN</button>
+                    <div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 2: 2D Spatial Sandbox (Span 5) -->
+        <div class="col-span-5 panel p-6 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xs font-bold text-slate-400 tracking-widest uppercase">Omni-Directional Output</h2>
+                <div class="text-right">
+                    <p class="text-xs text-slate-500">Confidence</p>
+                    <p id="ui-conf" class="font-black text-xl text-white">--%</p>
+                </div>
+            </div>
+            
+            <div class="w-full flex-1 border border-slate-700 rounded-lg relative bg-slate-900 overflow-hidden shadow-inner">
+                <!-- Grid Lines -->
+                <div class="absolute w-full h-[1px] bg-slate-700 top-1/2"></div>
+                <div class="absolute h-full w-[1px] bg-slate-700 left-1/2"></div>
+                
+                <!-- Axis Labels -->
+                <span class="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">UP / FISTS</span>
+                <span class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">DOWN / FEET</span>
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">LEFT</span>
+                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">RIGHT</span>
+
+                <!-- Cursor -->
+                <div id="cursor" class="absolute w-12 h-12 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 border-[3px] border-white shadow-[0_0_20px_rgba(239,68,68,1)]" style="left: 50%; top: 50%;"></div>
+            </div>
+
+            <div class="flex justify-between mt-4 bg-slate-800 rounded p-3">
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Ground Truth Input</p>
+                    <p id="ui-injected" class="font-bold text-slate-100">--</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">ONNX Decoding</p>
+                    <p id="ui-decoded" class="font-bold text-blue-400">--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 3: Live Real-Data EEG Graph (Span 4) -->
+        <div class="col-span-4 panel p-5 flex flex-col">
+            <h2 class="text-xs font-bold text-slate-400 mb-2 tracking-widest uppercase">Live EEG Signal Extraction</h2>
+            <p class="text-[10px] text-slate-500 mb-4">Displaying mathematically true trial data (Normalized)</p>
+            
+            <div class="flex-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 relative">
+                <canvas id="eegChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Statistics Logic ---
+        let totalTrials = 0;
+        let correctTrials = 0;
+
+        // --- Chart.js Setup ---
+        const ctx = document.getElementById('eegChart').getContext('2d');
+        const labels = Array.from({length: 160}, (_, i) => i); // X-axis time points
+        
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'C3 (Left Motor)', borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, data: [] },
+                    { label: 'Cz (Center Motor)', borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0, data: [] },
+                    { label: 'C4 (Right Motor)', borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, data: [] }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 300 }, // Snappy updates
+                scales: {
+                    y: { grid: { color: '#334155' }, ticks: { color: '#64748b' } },
+                    x: { display: false } // Hide X ticks for clean look
+                },
+                plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 12 } } },
+                elements: { line: { tension: 0.4 } } // Smooth curves
+            }
+        });
+
+        // --- Sandbox Physics ---
+        let posX = 50, posY = 50;
+        const STEP = 15;
+
+        // --- WebSocket Logic ---
+        let ws;
+        function connectWS() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onopen = () => {
+                const s = document.getElementById('ws-status');
+                s.innerText = "LINK ACTIVE"; s.className = "px-3 py-1 text-xs font-bold rounded bg-emerald-950 text-emerald-500 border border-emerald-800";
+            };
+            ws.onclose = () => setTimeout(connectWS, 2000);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (!data.move_cmd) return;
+
+                if (data.move_cmd !== "CENTER") {
+                    // Update Stats
+                    totalTrials++;
+                    if (data.match) correctTrials++;
+                    document.getElementById('stat-trials').innerText = totalTrials;
+                    document.getElementById('stat-acc').innerText = ((correctTrials / totalTrials) * 100).toFixed(1) + "%";
+
+                    // Update UI Labels
+                    document.getElementById('ui-injected').innerText = data.injected_true;
+                    document.getElementById('ui-decoded').innerText = data.prediction;
+                    document.getElementById('ui-conf').innerText = data.confidence.toFixed(1) + "%";
+
+                    // Update Topographical Map
+                    document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
+                    const desc = document.getElementById('cortex-desc');
+                    if (data.target_class === 0) {
+                        document.getElementById('n-c4').classList.add('active-node');
+                        desc.innerHTML = "<span class='text-red-400'>Right Motor Cortex</span> processing Left Hand intent.";
+                    } else if (data.target_class === 1) {
+                        document.getElementById('n-c3').classList.add('active-node');
+                        desc.innerHTML = "<span class='text-red-400'>Left Motor Cortex</span> processing Right Hand intent.";
+                    } else if (data.target_class === 2) {
+                        document.getElementById('n-c3').classList.add('active-node');
+                        document.getElementById('n-c4').classList.add('active-node');
+                        desc.innerHTML = "<span class='text-red-400'>Bilateral Motor Cortex</span> processing Up intent.";
+                    } else if (data.target_class === 3) {
+                        document.getElementById('n-cz').classList.add('active-node');
+                        desc.innerHTML = "<span class='text-red-400'>Supplementary Motor Area</span> processing Down intent.";
+                    }
+
+                    // Update True EEG Graph
+                    chart.data.datasets[0].data = data.waveforms[0]; // C3
+                    chart.data.datasets[1].data = data.waveforms[1]; // Cz
+                    chart.data.datasets[2].data = data.waveforms[2]; // C4
+                    chart.update();
+
+                }
+
+                // Move Cursor
+                const cursor = document.getElementById('cursor');
+                switch(data.move_cmd) {
+                    case "LEFT":  posX = Math.max(10, posX - STEP); break;
+                    case "RIGHT": posX = Math.min(90, posX + STEP); break;
+                    case "UP":    posY = Math.max(10, posY - STEP); break;
+                    case "DOWN":  posY = Math.min(90, posY + STEP); break;
+                    case "CENTER": posX = 50; posY = 50; break;
+                }
+                cursor.style.left = `${posX}%`;
+                cursor.style.top = `${posY}%`;
+            };
+        }
+
+        function cmd(action) {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: action }));
+        }
+
+        connectWS();
+    </script>
+</body>
+</html>
