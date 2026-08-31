@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import numpy as np
 import onnxruntime as ort
 import uvicorn
@@ -52,7 +53,7 @@ def run_inference(sample_idx: int):
 # ---------------------------------------------------------
 app = FastAPI(title="Cognitive Parsing Engine")
 templates = Jinja2Templates(directory="templates")
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
