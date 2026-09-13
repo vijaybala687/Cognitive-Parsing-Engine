@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Parsing Engine - 3D Clinical Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Three.js Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { background-color: #050b14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .panel { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        #cursor { transition: left 0.35s ease-out, top 0.35s ease-out; }
+        #brain-container { width: 100%; height: 220px; outline: none; border-radius: 8px; overflow: hidden; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 overflow-hidden">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center px-4 mb-4">
+        <h1 class="text-2xl font-black tracking-tight text-blue-500">COGNITIVE <span class="text-slate-100">PARSING ENGINE</span></h1>
+        <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-slate-400">SESSION ACCURACY: <span id="stat-acc" class="text-emerald-400">0.0%</span></span>
+            <span class="text-sm font-bold text-slate-400">TRIALS: <span id="stat-trials" class="text-white">0</span></span>
+            <span id="ws-status" class="px-3 py-1 text-xs font-bold rounded bg-red-950 text-red-500 border border-red-800">DISCONNECTED</span>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-12 gap-4 flex-1 min-h-0">
+        
+        <!-- COLUMN 1: 3D Brain & Controls (Span 3) -->
+        <div class="col-span-3 flex flex-col gap-4">
+            <div class="panel p-5 flex-1 flex flex-col">
+                <h2 class="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">3D Cortex Activation</h2>
+                
+                <!-- WebGL Brain Canvas Container -->
+                <div id="brain-container" class="mb-3 flex-1 relative cursor-move">
+                    <div id="loading-text" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Loading 3D Model...</div>
+                </div>
+                
+                <p id="cortex-desc" class="text-center text-xs font-semibold text-slate-500 min-h-[32px]">Awaiting EEG Injection...</p>
+            </div>
+
+            <div class="panel p-4">
+                <div class="grid grid-cols-3 gap-2">
+                    <div></div>
+                    <button onclick="cmd('INJECT_UP')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">▲ UP</button>
+                    <div></div>
+                    <button onclick="cmd('INJECT_LEFT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">◀ LFT</button>
+                    <button onclick="cmd('RESET')" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 px-2 rounded text-[10px] transition active:scale-95">RST</button>
+                    <button onclick="cmd('INJECT_RIGHT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">RGT ▶</button>
+                    <div></div>
+                    <button onclick="cmd('INJECT_DOWN')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">▼ DWN</button>
+                    <div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 2: 2D Spatial Sandbox (Span 5) -->
+        <div class="col-span-5 panel p-6 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xs font-bold text-slate-400 tracking-widest uppercase">Omni-Directional Output</h2>
+                <div class="text-right">
+                    <p class="text-[10px] text-slate-500 uppercase">Confidence</p>
+                    <p id="ui-conf" class="font-black text-xl text-white">--%</p>
+                </div>
+            </div>
+            
+            <div class="w-full flex-1 border border-slate-700 rounded-lg relative bg-slate-900 overflow-hidden shadow-inner">
+                <div class="absolute w-full h-[1px] bg-slate-700 top-1/2"></div>
+                <div class="absolute h-full w-[1px] bg-slate-700 left-1/2"></div>
+                
+                <span class="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">UP / FISTS</span>
+                <span class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">DOWN / FEET</span>
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">LEFT</span>
+                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">RIGHT</span>
+
+                <div id="cursor" class="absolute w-12 h-12 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 border-[3px] border-white shadow-[0_0_20px_rgba(239,68,68,1)]" style="left: 50%; top: 50%;"></div>
+            </div>
+
+            <div class="flex justify-between mt-4 bg-slate-800 rounded p-3">
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Ground Truth Input</p>
+                    <p id="ui-injected" class="font-bold text-slate-100">--</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">ONNX Decoding</p>
+                    <p id="ui-decoded" class="font-bold text-blue-400">--</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 3: Live Real-Data EEG Graph (Span 4) -->
+        <div class="col-span-4 panel p-5 flex flex-col">
+            <h2 class="text-xs font-bold text-slate-400 mb-2 tracking-widest uppercase">Live EEG Signal Extraction</h2>
+            <p class="text-[10px] text-slate-500 mb-4">Displaying mathematically true trial data (Normalized)</p>
+            <div class="flex-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 relative">
+                <canvas id="eegChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. THREE.JS 3D BRAIN & NEURO-NODES SETUP
+        // ==========================================
+        const container = document.getElementById('brain-container');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 4, 10); 
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.outputEncoding = THREE.sRGBEncoding; 
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.2;
+        controls.enablePan = false;
+
+        // --- Environmental Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5); 
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        // --- Color-Coded Neuro-Nodes ---
+        function createNeuroNode(x, y, z, colorHex) {
+            const geo = new THREE.SphereGeometry(0.12, 16, 16);
+            // Completely invisible when inactive
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.0 }); 
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+
+            // Light is tightly controlled (Intensity 0, Max Distance 2.5) to prevent white blowout
+            const light = new THREE.PointLight(colorHex, 0, 2.5); 
+            mesh.add(light);
+            scene.add(mesh);
+            
+            return { mesh, light, baseColor: colorHex };
+        }
+
+        // Tightly positioned against the cortex surface
+        const nodeC3 = createNeuroNode(-1.4, 1.8, 0.2, 0x3b82f6); // Left (Blue)
+        const nodeC4 = createNeuroNode(1.4, 1.8, 0.2, 0xff3333);  // Right (Red)
+        const nodeCz = createNeuroNode(0, 2.4, 0.2, 0x10b981);    // Center (Green)
+        const allNodes = [nodeC3, nodeC4, nodeCz];
+
+        // --- Load 3D Model ---
+        const loader = new THREE.GLTFLoader();
+        let brainModel;
+        loader.load('/static/brain.glb', function (gltf) {
+            document.getElementById('loading-text').style.display = 'none';
+            brainModel = gltf.scene;
+            
+            const box = new THREE.Box3().setFromObject(brainModel);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 4.8 / maxDim; 
+            
+            brainModel.scale.set(scale, scale, scale);
+            brainModel.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+            
+            brainModel.traverse((node) => {
+                if (node.isMesh && node.material) {
+                    node.material.roughness = 0.35; 
+                    node.material.metalness = 0.1;  
+                }
+            });
+            scene.add(brainModel);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // 3D Animation Loop
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate3D();
+
+        // ==========================================
+        // 2. CHART.JS LIVE EEG GRAPH
+        // ==========================================
+        let totalTrials = 0; let correctTrials = 0;
+        const ctx = document.getElementById('eegChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 160}, (_, i) => i),
+                datasets: [
+                    { label: 'C3 (Left)', borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, data: [] },
+                    { label: 'Cz (Center)', borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0, data: [] },
+                    { label: 'C4 (Right)', borderColor: '#ef4444', borderWidth: 1.5, pointRadius: 0, data: [] }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                scales: { y: { grid: { color: '#334155' } }, x: { display: false } },
+                plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 12 } } },
+                elements: { line: { tension: 0.4 } }
+            }
+        });
+
+        // ==========================================
+        // 3. WEBSOCKET, UI LOGIC & CINEMATIC FREEZE
+        // ==========================================
+        let posX = 50, posY = 50;
+        const STEP = 15;
+        let ws;
+        let isProcessing = false; // System lock variable
+
+        function setButtonState(disabled) {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.disabled = disabled;
+                if(disabled) {
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        function connectWS() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onopen = () => {
+                const s = document.getElementById('ws-status');
+                s.innerText = "LINK ACTIVE"; s.className = "px-3 py-1 text-xs font-bold rounded bg-emerald-950 text-emerald-500 border border-emerald-800";
+            };
+            ws.onclose = () => setTimeout(connectWS, 2000);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (!data.move_cmd) return;
+
+                if (data.move_cmd !== "CENTER") {
+                    totalTrials++; if (data.match) correctTrials++;
+                    document.getElementById('stat-trials').innerText = totalTrials;
+                    document.getElementById('stat-acc').innerText = ((correctTrials / totalTrials) * 100).toFixed(1) + "%";
+
+                    document.getElementById('ui-injected').innerText = data.injected_true;
+                    document.getElementById('ui-decoded').innerText = data.prediction;
+                    document.getElementById('ui-conf').innerText = data.confidence.toFixed(1) + "%";
+
+                    // --- INITIATE CINEMATIC FREEZE-FRAME ---
+                    isProcessing = true;
+                    setButtonState(true); // Lock UI
+                    controls.autoRotate = false; // Freeze the brain's rotation
+                    
+                    // Drop environmental lighting into "Dark Mode"
+                    ambientLight.intensity = 0.1;
+                    dirLight.intensity = 0.2;
+
+                    const desc = document.getElementById('cortex-desc');
+                    const popIntensity = 4.0; 
+                    
+                    function activateNode(node) {
+                        node.mesh.material.opacity = 0.9; 
+                        node.light.intensity = popIntensity; 
+                    }
+
+                    if (data.target_class === 0) {
+                        activateNode(nodeC4);
+                        desc.innerHTML = "<span class='text-red-400 font-bold'>Right Motor Cortex</span> processing Left Hand intent.";
+                    } else if (data.target_class === 1) {
+                        activateNode(nodeC3);
+                        desc.innerHTML = "<span class='text-blue-400 font-bold'>Left Motor Cortex</span> processing Right Hand intent.";
+                    } else if (data.target_class === 2) {
+                        activateNode(nodeC3); activateNode(nodeC4);
+                        desc.innerHTML = "<span class='text-purple-400 font-bold'>Bilateral Motor Cortex</span> processing Up intent.";
+                    } else if (data.target_class === 3) {
+                        activateNode(nodeCz);
+                        desc.innerHTML = "<span class='text-emerald-400 font-bold'>Supplementary Motor Area</span> processing Down intent.";
+                    }
+
+                    // Release the freeze-frame after exactly 2 seconds
+                    setTimeout(() => {
+                        // Restore world lights
+                        ambientLight.intensity = 0.8;
+                        dirLight.intensity = 2.5;
+                        controls.autoRotate = true; // Resume spin
+                        
+                        // Hide nodes
+                        allNodes.forEach(n => {
+                            n.mesh.material.opacity = 0.0;
+                            n.light.intensity = 0.0;
+                        });
+
+                        // Unlock UI
+                        isProcessing = false;
+                        setButtonState(false);
+                        desc.innerHTML = "Awaiting EEG Injection...";
+                    }, 2000);
+
+                    // Update Chart
+                    chart.data.datasets[0].data = data.waveforms[0];
+                    chart.data.datasets[1].data = data.waveforms[1];
+                    chart.data.datasets[2].data = data.waveforms[2];
+                    chart.update();
+                }
+
+                // Move Cursor
+                const cursor = document.getElementById('cursor');
+                switch(data.move_cmd) {
+                    case "LEFT":  posX = Math.max(10, posX - STEP); break;
+                    case "RIGHT": posX = Math.min(90, posX - STEP * -1); break;
+                    case "UP":    posY = Math.max(10, posY - STEP); break;
+                    case "DOWN":  posY = Math.min(90, posY - STEP * -1); break;
+                    case "CENTER": posX = 50; posY = 50; break;
+                }
+                cursor.style.left = `${posX}%`;
+                cursor.style.top = `${posY}%`;
+            };
+        }
+
+        function cmd(action) {
+            if (isProcessing) return; // Hard block if clicked during freeze
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: action }));
+        }
+
+        connectWS();
+    </script>
+</body>
+</html>
