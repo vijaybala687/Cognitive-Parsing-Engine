@@ -13,7 +13,7 @@
     <style>
         body { background-color: #050b14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .panel { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
-        #cursor { transition: left 0.35s ease-out, top 0.35s ease-out; }
+        #cursor { transition: left 0.35s ease-out, top 0.35s ease-out, transform 0.2s; }
         #brain-container { width: 100%; height: 220px; outline: none; border-radius: 8px; overflow: hidden; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); }
     </style>
 </head>
@@ -23,6 +23,7 @@
     <header class="flex justify-between items-center px-4 mb-4">
         <h1 class="text-2xl font-black tracking-tight text-blue-500">COGNITIVE <span class="text-slate-100">PARSING ENGINE</span></h1>
         <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-slate-400">SCORE: <span id="stat-score" class="text-amber-400 font-black text-lg">0</span></span>
             <span class="text-sm font-bold text-slate-400">SESSION ACCURACY: <span id="stat-acc" class="text-emerald-400">0.0%</span></span>
             <span class="text-sm font-bold text-slate-400">TRIALS: <span id="stat-trials" class="text-white">0</span></span>
             <span id="ws-status" class="px-3 py-1 text-xs font-bold rounded bg-red-950 text-red-500 border border-red-800">DISCONNECTED</span>
@@ -79,6 +80,9 @@
                 <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">LEFT</span>
                 <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">RIGHT</span>
 
+                <!-- THE TARGET ZONE -->
+                <div id="target-zone" class="absolute w-16 h-16 bg-blue-500/20 rounded-full border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)] animate-pulse transform -translate-x-1/2 -translate-y-1/2 transition-all duration-700" style="left: 80%; top: 20%;"></div>
+
                 <div id="cursor" class="absolute w-12 h-12 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 border-[3px] border-white shadow-[0_0_20px_rgba(239,68,68,1)]" style="left: 50%; top: 50%;"></div>
             </div>
 
@@ -127,7 +131,6 @@
         controls.autoRotateSpeed = 1.2;
         controls.enablePan = false;
 
-        // --- Environmental Lights ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
         scene.add(ambientLight);
         
@@ -135,29 +138,22 @@
         dirLight.position.set(5, 10, 7);
         scene.add(dirLight);
 
-        // --- Color-Coded Neuro-Nodes ---
         function createNeuroNode(x, y, z, colorHex) {
             const geo = new THREE.SphereGeometry(0.12, 16, 16);
-            // Completely invisible when inactive
             const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.0 }); 
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(x, y, z);
-
-            // Light is tightly controlled (Intensity 0, Max Distance 2.5) to prevent white blowout
             const light = new THREE.PointLight(colorHex, 0, 2.5); 
             mesh.add(light);
             scene.add(mesh);
-            
             return { mesh, light, baseColor: colorHex };
         }
 
-        // Tightly positioned against the cortex surface
-        const nodeC3 = createNeuroNode(-1.4, 1.8, 0.2, 0x3b82f6); // Left (Blue)
-        const nodeC4 = createNeuroNode(1.4, 1.8, 0.2, 0xff3333);  // Right (Red)
-        const nodeCz = createNeuroNode(0, 2.4, 0.2, 0x10b981);    // Center (Green)
+        const nodeC3 = createNeuroNode(-1.4, 1.8, 0.2, 0x3b82f6); 
+        const nodeC4 = createNeuroNode(1.4, 1.8, 0.2, 0xff3333);  
+        const nodeCz = createNeuroNode(0, 2.4, 0.2, 0x10b981);    
         const allNodes = [nodeC3, nodeC4, nodeCz];
 
-        // --- Load 3D Model ---
         const loader = new THREE.GLTFLoader();
         let brainModel;
         loader.load('/static/brain.glb', function (gltf) {
@@ -188,7 +184,6 @@
             renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
-        // 3D Animation Loop
         function animate3D() {
             requestAnimationFrame(animate3D);
             controls.update();
@@ -220,12 +215,24 @@
         });
 
         // ==========================================
-        // 3. WEBSOCKET, UI LOGIC & CINEMATIC FREEZE
+        // 3. GAME STATE & TARGET LOGIC
         // ==========================================
         let posX = 50, posY = 50;
+        let targetX = 80, targetY = 20;
+        let score = 0;
         const STEP = 15;
         let ws;
-        let isProcessing = false; // System lock variable
+        let isProcessing = false; 
+
+        function spawnTarget() {
+            // Keep target away from edges
+            targetX = 15 + Math.random() * 70; 
+            targetY = 15 + Math.random() * 70;
+            const tz = document.getElementById('target-zone');
+            tz.style.left = `${targetX}%`;
+            tz.style.top = `${targetY}%`;
+        }
+        spawnTarget(); // Initial spawn
 
         function setButtonState(disabled) {
             const buttons = document.querySelectorAll('button');
@@ -239,6 +246,9 @@
             });
         }
 
+        // ==========================================
+        // 4. WEBSOCKET & VISUAL SCAFFOLDING NOVELTY
+        // ==========================================
         function connectWS() {
             ws = new WebSocket(`ws://${window.location.host}/ws`);
             ws.onopen = () => {
@@ -251,6 +261,9 @@
                 const data = JSON.parse(event.data);
                 if (!data.move_cmd) return;
 
+                const cursor = document.getElementById('cursor');
+                const confUI = document.getElementById('ui-conf');
+
                 if (data.move_cmd !== "CENTER") {
                     totalTrials++; if (data.match) correctTrials++;
                     document.getElementById('stat-trials').innerText = totalTrials;
@@ -258,14 +271,12 @@
 
                     document.getElementById('ui-injected').innerText = data.injected_true;
                     document.getElementById('ui-decoded').innerText = data.prediction;
-                    document.getElementById('ui-conf').innerText = data.confidence.toFixed(1) + "%";
 
-                    // --- INITIATE CINEMATIC FREEZE-FRAME ---
+                    // --- CINEMATIC FREEZE-FRAME ---
                     isProcessing = true;
-                    setButtonState(true); // Lock UI
-                    controls.autoRotate = false; // Freeze the brain's rotation
+                    setButtonState(true); 
+                    controls.autoRotate = false; 
                     
-                    // Drop environmental lighting into "Dark Mode"
                     ambientLight.intensity = 0.1;
                     dirLight.intensity = 0.2;
 
@@ -291,48 +302,119 @@
                         desc.innerHTML = "<span class='text-emerald-400 font-bold'>Supplementary Motor Area</span> processing Down intent.";
                     }
 
-                    // Release the freeze-frame after exactly 2 seconds
                     setTimeout(() => {
-                        // Restore world lights
                         ambientLight.intensity = 0.8;
                         dirLight.intensity = 2.5;
-                        controls.autoRotate = true; // Resume spin
+                        controls.autoRotate = true; 
                         
-                        // Hide nodes
                         allNodes.forEach(n => {
                             n.mesh.material.opacity = 0.0;
                             n.light.intensity = 0.0;
                         });
 
-                        // Unlock UI
                         isProcessing = false;
                         setButtonState(false);
                         desc.innerHTML = "Awaiting EEG Injection...";
                     }, 2000);
 
-                    // Update Chart
                     chart.data.datasets[0].data = data.waveforms[0];
                     chart.data.datasets[1].data = data.waveforms[1];
                     chart.data.datasets[2].data = data.waveforms[2];
                     chart.update();
                 }
 
-                // Move Cursor
-                const cursor = document.getElementById('cursor');
-                switch(data.move_cmd) {
-                    case "LEFT":  posX = Math.max(10, posX - STEP); break;
-                    case "RIGHT": posX = Math.min(90, posX - STEP * -1); break;
-                    case "UP":    posY = Math.max(10, posY - STEP); break;
-                    case "DOWN":  posY = Math.min(90, posY - STEP * -1); break;
+                // ==========================================
+                // MAJOR NOVELTY: VECTOR-BLENDED SCAFFOLDING
+                // ==========================================
+                const classToCmd = {0: "LEFT", 1: "RIGHT", 2: "UP", 3: "DOWN"};
+                const target_cmd = classToCmd[data.target_class]; 
+                const predicted_cmd = data.move_cmd;              
+                
+                let userForce = 0;
+                let autoAssistForce = 0;
+                
+                if (data.move_cmd !== "CENTER") {
+                    if (data.confidence < 65.0 || !data.match) {
+                        
+                        userForce = data.match ? data.confidence : data.confidence * 0.3;
+                        autoAssistForce = 100.0 - userForce; 
+                        
+                        cursor.style.backgroundColor = '#f59e0b';
+                        cursor.style.borderColor = '#fcd34d';
+                        cursor.style.boxShadow = '0 0 25px rgba(245,158,11,1)';
+                        
+                        confUI.innerHTML = `
+                            <span class="text-amber-400">${data.confidence.toFixed(1)}%</span><br>
+                            <span class="text-[9px] text-amber-200 bg-amber-900 px-1.5 py-0.5 rounded border border-amber-700 tracking-wider">
+                            ⚙️ ASSIST VECTOR: +${autoAssistForce.toFixed(1)}% TO ${target_cmd}</span>
+                        `;
+                    } else {
+                        userForce = data.confidence;
+                        autoAssistForce = 0; 
+                        
+                        cursor.style.backgroundColor = '#10b981';
+                        cursor.style.borderColor = '#6ee7b7';
+                        cursor.style.boxShadow = '0 0 25px rgba(16,185,129,1)';
+                        
+                        confUI.innerHTML = `
+                            <span class="text-emerald-400">${data.confidence.toFixed(1)}%</span><br>
+                            <span class="text-[9px] text-emerald-200 bg-emerald-900 px-1.5 py-0.5 rounded border border-emerald-700 tracking-wider">
+                            🧠 RAW NEURAL CONTROL</span>
+                        `;
+                    }
+                } else {
+                    confUI.innerHTML = `--%`;
+                    cursor.style.backgroundColor = '#ef4444';
+                    cursor.style.borderColor = '#ffffff';
+                    cursor.style.boxShadow = '0 0 20px rgba(239,68,68,1)';
+                }
+
+                // --- Apply User's Raw Brain Vector ---
+                const userStep = STEP * (userForce / 100.0);
+                switch(predicted_cmd) {
+                    case "LEFT":  posX -= userStep; break;
+                    case "RIGHT": posX += userStep; break;
+                    case "UP":    posY -= userStep; break;
+                    case "DOWN":  posY += userStep; break;
                     case "CENTER": posX = 50; posY = 50; break;
                 }
+
+                // --- Apply Game's Auto-Assist Vector ---
+                if (data.move_cmd !== "CENTER") {
+                    const assistStep = STEP * (autoAssistForce / 100.0);
+                    switch(target_cmd) {
+                        case "LEFT":  posX -= assistStep; break;
+                        case "RIGHT": posX += assistStep; break;
+                        case "UP":    posY -= assistStep; break;
+                        case "DOWN":  posY += assistStep; break;
+                    }
+                }
+
+                posX = Math.max(10, Math.min(90, posX));
+                posY = Math.max(10, Math.min(90, posY));
+                
                 cursor.style.left = `${posX}%`;
                 cursor.style.top = `${posY}%`;
+
+                // --- COLLISION DETECTION (Hit the Target!) ---
+                if (data.move_cmd !== "CENTER") {
+                    const dist = Math.sqrt(Math.pow(posX - targetX, 2) + Math.pow(posY - targetY, 2));
+                    if (dist < 12.0) { // Collision radius
+                        score += 100;
+                        document.getElementById('stat-score').innerText = score;
+                        
+                        // Flash cursor green to indicate a hit
+                        cursor.style.transform = "translate(-50%, -50%) scale(1.4)";
+                        setTimeout(() => { cursor.style.transform = "translate(-50%, -50%) scale(1)"; }, 200);
+                        
+                        spawnTarget();
+                    }
+                }
             };
         }
 
         function cmd(action) {
-            if (isProcessing) return; // Hard block if clicked during freeze
+            if (isProcessing) return; 
             if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: action }));
         }
 
