@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cognitive Parsing Engine - 3D Clinical Dashboard</title>
+    <title>Cognitive Parsing Engine - Adaptive Clinical Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Three.js Dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         body { background-color: #050b14; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .panel { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
-        #cursor { transition: left 0.35s ease-out, top 0.35s ease-out, transform 0.2s; }
-        #brain-container { width: 100%; height: 220px; outline: none; border-radius: 8px; overflow: hidden; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); }
+        #brain-container, #game-container { width: 100%; height: 100%; outline: none; border-radius: 8px; overflow: hidden; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); }
+        #brain-container { height: 180px; }
     </style>
 </head>
 <body class="h-screen flex flex-col p-4 overflow-hidden">
 
     <!-- Header -->
-    <header class="flex justify-between items-center px-4 mb-4">
+    <header class="flex justify-between items-center px-4 mb-3">
         <h1 class="text-2xl font-black tracking-tight text-blue-500">COGNITIVE <span class="text-slate-100">PARSING ENGINE</span></h1>
         <div class="flex items-center gap-4">
             <span class="text-sm font-bold text-slate-400">SCORE: <span id="stat-score" class="text-amber-400 font-black text-lg">0</span></span>
@@ -33,75 +32,107 @@
     <!-- Main Grid -->
     <div class="grid grid-cols-12 gap-4 flex-1 min-h-0">
         
-        <!-- COLUMN 1: 3D Brain & Controls (Span 3) -->
-        <div class="col-span-3 flex flex-col gap-4">
-            <div class="panel p-5 flex-1 flex flex-col">
-                <h2 class="text-xs font-bold text-slate-400 mb-3 tracking-widest uppercase">3D Cortex Activation</h2>
+        <!-- COLUMN 1: Clinical Controls & Brain (Span 3) -->
+        <div class="col-span-3 flex flex-col gap-3">
+            
+            <!-- CLINICAL PARAMETER DASHBOARD -->
+            <div class="panel p-4 bg-slate-900 border-indigo-900">
+                <h2 class="text-[10px] font-bold text-indigo-400 mb-3 tracking-widest uppercase flex justify-between items-center">
+                    <span>Clinical State Parameters</span>
+                    <span class="px-1.5 py-0.5 bg-indigo-950 text-indigo-400 rounded border border-indigo-800 text-[8px]">HYBRID CONTROL</span>
+                </h2>
                 
-                <!-- WebGL Brain Canvas Container -->
-                <div id="brain-container" class="mb-3 flex-1 relative cursor-move">
-                    <div id="loading-text" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Loading 3D Model...</div>
+                <div class="mb-3">
+                    <label class="text-[9px] text-slate-400 uppercase font-bold">Baseline Stroke Severity</label>
+                    <select id="stroke-level" class="w-full bg-slate-800 text-xs text-white p-1.5 rounded border border-slate-600 mt-1 outline-none">
+                        <option value="severe">Severe (High Assist)</option>
+                        <option value="moderate" selected>Moderate (Standard)</option>
+                        <option value="mild">Mild (Low Assist)</option>
+                    </select>
                 </div>
                 
-                <p id="cortex-desc" class="text-center text-xs font-semibold text-slate-500 min-h-[32px]">Awaiting EEG Injection...</p>
+                <div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold">Calculated Fatigue</label>
+                        <span id="fatigue-val" class="text-xs font-bold text-amber-400">20%</span>
+                    </div>
+                    <!-- FIX: Restored exact working input HTML -->
+                    <input type="range" id="fatigue-slider" min="0" max="100" value="20" class="w-full mt-1 accent-amber-500">
+                </div>
+
+                <div class="mt-3 p-2 bg-slate-800 rounded border border-slate-700 text-center">
+                    <span class="text-[8px] text-slate-400 uppercase tracking-widest block mb-0.5">Active Environment Profile</span>
+                    <span id="env-profile" class="text-sm font-black text-blue-400">LEVEL 2: STANDARD</span>
+                </div>
             </div>
 
-            <div class="panel p-4">
-                <div class="grid grid-cols-3 gap-2">
-                    <div></div>
-                    <button onclick="cmd('INJECT_UP')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">▲ UP</button>
-                    <div></div>
-                    <button onclick="cmd('INJECT_LEFT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">◀ LFT</button>
-                    <button onclick="cmd('RESET')" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 px-2 rounded text-[10px] transition active:scale-95">RST</button>
-                    <button onclick="cmd('INJECT_RIGHT')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">RGT ▶</button>
-                    <div></div>
-                    <button onclick="cmd('INJECT_DOWN')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-2 rounded text-xs transition active:scale-95">▼ DWN</button>
-                    <div></div>
+            <!-- 3D CORTEX -->
+            <div class="panel p-3 relative flex flex-col">
+                <div id="brain-container" class="flex-1 relative cursor-move">
+                    <div id="loading-text" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Loading 3D Model...</div>
                 </div>
+                <p id="cortex-desc" class="text-center text-[10px] font-semibold text-slate-500 mt-2">Awaiting EEG Injection...</p>
+            </div>
+
+            <!-- INJECTION CONTROLS -->
+            <div class="panel p-3 flex flex-col gap-1.5 flex-1 justify-end">
+                <button onclick="cmd('INJECT_UP')" class="w-full bg-slate-800 hover:bg-blue-900 text-left px-3 py-1.5 rounded border border-slate-600 hover:border-blue-500 transition group relative overflow-hidden">
+                    <span class="text-[8px] text-slate-400 font-bold tracking-wider block">TARGET: BOTH FISTS (UP)</span>
+                    <span class="text-xs font-black text-slate-200 group-hover:text-white">Bilateral Cortical Sync</span>
+                </button>
+                <button onclick="cmd('INJECT_DOWN')" class="w-full bg-slate-800 hover:bg-blue-900 text-left px-3 py-1.5 rounded border border-slate-600 hover:border-blue-500 transition group relative overflow-hidden">
+                    <span class="text-[8px] text-slate-400 font-bold tracking-wider block">TARGET: BOTH FEET (DOWN)</span>
+                    <span class="text-xs font-black text-slate-200 group-hover:text-white">Supplementary Motor Area</span>
+                </button>
+                <button onclick="cmd('INJECT_LEFT')" class="w-full bg-slate-800 hover:bg-blue-900 text-left px-3 py-1.5 rounded border border-slate-600 hover:border-blue-500 transition group relative overflow-hidden">
+                    <span class="text-[8px] text-slate-400 font-bold tracking-wider block">TARGET: LEFT HAND (LEFT)</span>
+                    <span class="text-xs font-black text-slate-200 group-hover:text-white">Right Motor Cortex</span>
+                </button>
+                <button onclick="cmd('INJECT_RIGHT')" class="w-full bg-slate-800 hover:bg-blue-900 text-left px-3 py-1.5 rounded border border-slate-600 hover:border-blue-500 transition group relative overflow-hidden">
+                    <span class="text-[8px] text-slate-400 font-bold tracking-wider block">TARGET: RIGHT HAND (RIGHT)</span>
+                    <span class="text-xs font-black text-slate-200 group-hover:text-white">Left Motor Cortex</span>
+                </button>
+                <button onclick="cmd('RESET')" class="w-full mt-1 bg-red-950/40 hover:bg-red-900 text-center px-4 py-1.5 rounded-lg border border-red-900/50 hover:border-red-500 transition text-red-400 font-bold text-[10px] tracking-widest">
+                    FLUSH NEURAL BUFFER
+                </button>
             </div>
         </div>
 
-        <!-- COLUMN 2: 2D Spatial Sandbox (Span 5) -->
-        <div class="col-span-5 panel p-6 flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xs font-bold text-slate-400 tracking-widest uppercase">Omni-Directional Output</h2>
-                <div class="text-right">
-                    <p class="text-[10px] text-slate-500 uppercase">Confidence</p>
-                    <p id="ui-conf" class="font-black text-xl text-white">--%</p>
+        <!-- COLUMN 2: 3D Adaptive WebGL Game (Span 5) -->
+        <div class="col-span-5 panel p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xs font-bold text-slate-400 tracking-widest uppercase">Neuro-Flight Environment</h2>
+                <div class="text-right flex gap-3">
+                    <div>
+                        <p class="text-[9px] text-slate-500 uppercase">Assist Threshold</p>
+                        <p id="ui-thresh" class="font-bold text-sm text-amber-500">65%</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] text-slate-500 uppercase">Input Confidence</p>
+                        <p id="ui-conf" class="font-black text-lg text-white">--%</p>
+                    </div>
                 </div>
             </div>
             
-            <div class="w-full flex-1 border border-slate-700 rounded-lg relative bg-slate-900 overflow-hidden shadow-inner">
-                <div class="absolute w-full h-[1px] bg-slate-700 top-1/2"></div>
-                <div class="absolute h-full w-[1px] bg-slate-700 left-1/2"></div>
-                
-                <span class="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">UP / FISTS</span>
-                <span class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-600">DOWN / FEET</span>
-                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">LEFT</span>
-                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-600">RIGHT</span>
-
-                <!-- THE TARGET ZONE -->
-                <div id="target-zone" class="absolute w-16 h-16 bg-blue-500/20 rounded-full border-2 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.6)] animate-pulse transform -translate-x-1/2 -translate-y-1/2 transition-all duration-700" style="left: 80%; top: 20%;"></div>
-
-                <div id="cursor" class="absolute w-12 h-12 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 border-[3px] border-white shadow-[0_0_20px_rgba(239,68,68,1)]" style="left: 50%; top: 50%;"></div>
+            <div id="game-container" class="w-full flex-1 border border-slate-700 rounded-lg relative bg-slate-900 overflow-hidden shadow-inner">
+                <!-- Drone Engine -->
             </div>
 
-            <div class="flex justify-between mt-4 bg-slate-800 rounded p-3">
+            <div class="flex justify-between mt-3 bg-slate-800 rounded p-2">
                 <div>
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">Ground Truth Input</p>
-                    <p id="ui-injected" class="font-bold text-slate-100">--</p>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Ground Truth Input</p>
+                    <p id="ui-injected" class="font-bold text-sm text-slate-100">--</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold">ONNX Decoding</p>
-                    <p id="ui-decoded" class="font-bold text-blue-400">--</p>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">ONNX Decoding</p>
+                    <p id="ui-decoded" class="font-bold text-sm text-blue-400">--</p>
                 </div>
             </div>
         </div>
 
         <!-- COLUMN 3: Live Real-Data EEG Graph (Span 4) -->
-        <div class="col-span-4 panel p-5 flex flex-col">
-            <h2 class="text-xs font-bold text-slate-400 mb-2 tracking-widest uppercase">Live EEG Signal Extraction</h2>
-            <p class="text-[10px] text-slate-500 mb-4">Displaying mathematically true trial data (Normalized)</p>
+        <div class="col-span-4 panel p-4 flex flex-col">
+            <h2 class="text-xs font-bold text-slate-400 mb-2 tracking-widest uppercase">Real-Time EEG Telemetry</h2>
             <div class="flex-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 relative">
                 <canvas id="eegChart"></canvas>
             </div>
@@ -110,90 +141,217 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. THREE.JS 3D BRAIN & NEURO-NODES SETUP
-        // ==========================================
-        const container = document.getElementById('brain-container');
-        const scene = new THREE.Scene();
+        // ==============================================================================
+        // CLINICAL STATE MANAGER (Difficulty Levels)
+        // ==============================================================================
+        let currentLevel = 2; 
+        let G_SPEED = 0.4;
+        let G_HOOP_SCALE = 1.0;
+        let G_ASSIST_THRESH = 65.0; 
+        let G_FOG_COLOR = new THREE.Color(0x050b14);
+        let G_1D_MODE = false;
+
+        // FIX: Restored exact working global variables
+        const strokeCtrl = document.getElementById('stroke-level');
+        const fatigueCtrl = document.getElementById('fatigue-slider');
+        const fatigueVal = document.getElementById('fatigue-val');
+        const envProfile = document.getElementById('env-profile');
+        const threshUI = document.getElementById('ui-thresh');
+
+        function updateClinicalState() {
+            const stroke = strokeCtrl.value;
+            const fatigue = parseInt(fatigueCtrl.value);
+            fatigueVal.innerText = fatigue + "%";
+
+            // FIX: Changed '&&' to '||' so dropping fatigue below 30 triggers Level 3 regardless of dropdown
+            if (stroke === 'severe' || fatigue > 70) { currentLevel = 1; } 
+            else if (stroke === 'mild' || fatigue < 30) { currentLevel = 3; } 
+            else { currentLevel = 2; }
+
+            const envProfile = document.getElementById('env-profile');
+            if (currentLevel === 1) {
+                envProfile.innerText = "LEVEL 1: GUIDED THERAPY";
+                envProfile.className = "text-sm font-black text-emerald-400";
+                G_SPEED = 0.2; G_HOOP_SCALE = 1.6; G_ASSIST_THRESH = 85.0; 
+                G_FOG_COLOR.setHex(0x082f49); G_1D_MODE = true; 
+            } 
+            else if (currentLevel === 2) {
+                envProfile.innerText = "LEVEL 2: STANDARD NEURO-FLIGHT";
+                envProfile.className = "text-sm font-black text-blue-400";
+                G_SPEED = 0.4; G_HOOP_SCALE = 1.0; G_ASSIST_THRESH = 65.0;
+                G_FOG_COLOR.setHex(0x050b14); G_1D_MODE = false;
+            } 
+            else if (currentLevel === 3) {
+                envProfile.innerText = "LEVEL 3: COGNITIVE OVERLOAD";
+                envProfile.className = "text-sm font-black text-red-500";
+                G_SPEED = 0.7; G_HOOP_SCALE = 0.6; G_ASSIST_THRESH = 40.0; 
+                G_FOG_COLOR.setHex(0x450a0a); G_1D_MODE = false;
+            }
+
+            document.getElementById('ui-thresh').innerText = G_ASSIST_THRESH + "%";
+            if(typeof g_scene !== 'undefined') {
+                g_scene.fog.color = G_FOG_COLOR;
+                targetRing.scale.set(G_HOOP_SCALE, G_HOOP_SCALE, G_HOOP_SCALE);
+            }
+        }
         
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-        camera.position.set(0, 4, 10); 
+        // FIX: Restored exact working event listeners
+        strokeCtrl.addEventListener('change', updateClinicalState);
+        fatigueCtrl.addEventListener('input', updateClinicalState);
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.outputEncoding = THREE.sRGBEncoding; 
-        container.appendChild(renderer.domElement);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 1.2;
-        controls.enablePan = false;
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
-        scene.add(ambientLight);
+        // ==============================================================================
+        // ENGINE 1: 3D BRAIN VISUALIZER (Hardware Accelerated & NaN Safe)
+        // ==============================================================================
+        const b_container = document.getElementById('brain-container');
+        const b_scene = new THREE.Scene();
+        const b_camera = new THREE.PerspectiveCamera(45, b_container.clientWidth / b_container.clientHeight, 0.1, 1000);
+        b_camera.position.set(0, 4, 10); 
         
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5); 
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
+        const b_renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: "high-performance" });
+        b_renderer.setSize(b_container.clientWidth, b_container.clientHeight);
+        b_renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+        b_container.appendChild(b_renderer.domElement);
+        
+        const b_controls = new THREE.OrbitControls(b_camera, b_renderer.domElement);
+        b_controls.enableDamping = true; b_controls.autoRotate = true; b_controls.autoRotateSpeed = 1.2; b_controls.enablePan = false;
+
+        const b_ambient = new THREE.AmbientLight(0xffffff, 0.8); b_scene.add(b_ambient);
+        const b_dirLight = new THREE.DirectionalLight(0xffffff, 2.5); b_dirLight.position.set(5, 10, 7); b_scene.add(b_dirLight);
 
         function createNeuroNode(x, y, z, colorHex) {
             const geo = new THREE.SphereGeometry(0.12, 16, 16);
             const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.0 }); 
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(x, y, z);
-            const light = new THREE.PointLight(colorHex, 0, 2.5); 
-            mesh.add(light);
-            scene.add(mesh);
+            const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x, y, z);
+            const light = new THREE.PointLight(colorHex, 0, 2.5); mesh.add(light);
+            b_scene.add(mesh);
             return { mesh, light, baseColor: colorHex };
         }
-
         const nodeC3 = createNeuroNode(-1.4, 1.8, 0.2, 0x3b82f6); 
         const nodeC4 = createNeuroNode(1.4, 1.8, 0.2, 0xff3333);  
         const nodeCz = createNeuroNode(0, 2.4, 0.2, 0x10b981);    
         const allNodes = [nodeC3, nodeC4, nodeCz];
 
         const loader = new THREE.GLTFLoader();
-        let brainModel;
         loader.load('/static/brain.glb', function (gltf) {
             document.getElementById('loading-text').style.display = 'none';
-            brainModel = gltf.scene;
-            
+            const brainModel = gltf.scene;
             const box = new THREE.Box3().setFromObject(brainModel);
             const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 4.8 / maxDim; 
-            
+            const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray());
+            const scale = maxDim > 0.1 ? 4.8 / maxDim : 1; // Failsafe
             brainModel.scale.set(scale, scale, scale);
             brainModel.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
-            
             brainModel.traverse((node) => {
-                if (node.isMesh && node.material) {
-                    node.material.roughness = 0.35; 
-                    node.material.metalness = 0.1;  
-                }
+                if (node.isMesh && node.material) { node.material.roughness = 0.35; node.material.metalness = 0.1; }
             });
-            scene.add(brainModel);
+            b_scene.add(brainModel);
         });
+
+        function animateBrain() {
+            requestAnimationFrame(animateBrain);
+            b_controls.update(); b_renderer.render(b_scene, b_camera);
+        }
+        animateBrain();
+
+        let nodeTimeout;
+        function flashBrainNode(target_class, descText) {
+            clearTimeout(nodeTimeout);
+            allNodes.forEach(n => { n.mesh.material.opacity = 0.0; n.light.intensity = 0.0; });
+            b_ambient.intensity = 0.1; b_dirLight.intensity = 0.2; 
+            
+            const activate = (node) => { node.mesh.material.opacity = 0.9; node.light.intensity = 4.0; };
+            if (target_class === 0) activate(nodeC4);
+            else if (target_class === 1) activate(nodeC3);
+            else if (target_class === 2) { activate(nodeC3); activate(nodeC4); }
+            else if (target_class === 3) activate(nodeCz);
+            
+            document.getElementById('cortex-desc').innerHTML = descText;
+
+            nodeTimeout = setTimeout(() => {
+                allNodes.forEach(n => { n.mesh.material.opacity = 0.0; n.light.intensity = 0.0; });
+                b_ambient.intensity = 0.8; b_dirLight.intensity = 2.5;
+                document.getElementById('cortex-desc').innerHTML = "Awaiting EEG Injection...";
+            }, 800);
+        }
+
+        // ==============================================================================
+        // ENGINE 2: 3D GAMIFIED REHABILITATION (Hardware Accelerated)
+        // ==============================================================================
+        const g_container = document.getElementById('game-container');
+        const g_scene = new THREE.Scene();
+        g_scene.fog = new THREE.FogExp2(G_FOG_COLOR.getHex(), 0.015);
+        
+        const g_camera = new THREE.PerspectiveCamera(50, g_container.clientWidth / g_container.clientHeight, 0.1, 1000);
+        g_camera.position.set(0, 3, 12); 
+        
+        const g_renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        g_renderer.setSize(g_container.clientWidth, g_container.clientHeight);
+        g_renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        g_container.appendChild(g_renderer.domElement);
+
+        const droneMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5, wireframe: true });
+        const drone = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 4).rotateX(Math.PI/2), droneMat);
+        g_scene.add(drone);
+
+        const targetRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.1, 16, 50), new THREE.MeshBasicMaterial({ color: 0x3b82f6 }));
+        function respawnRing() {
+            let spawnX = (Math.random() - 0.5) * 12;
+            let spawnY = G_1D_MODE ? 0 : (Math.random() - 0.5) * 8; 
+            targetRing.position.set(spawnX, spawnY, -80);
+        }
+        respawnRing();
+        g_scene.add(targetRing);
+
+        const gridHelper = new THREE.GridHelper(100, 20, 0x1e293b, 0x1e293b);
+        gridHelper.position.y = -5; g_scene.add(gridHelper);
+        const g_light = new THREE.PointLight(0xffffff, 1, 50); g_light.position.set(0, 10, 10); g_scene.add(g_light);
+
+        let score = 0;
+        let droneTargetX = 0;
+        let droneTargetY = 0;
+
+        function animateGame() {
+            requestAnimationFrame(animateGame);
+            
+            gridHelper.position.z += G_SPEED;
+            if (gridHelper.position.z > 5) { gridHelper.position.z -= 5; }
+            targetRing.position.z += G_SPEED; 
+            
+            drone.position.x += (droneTargetX - drone.position.x) * 0.1;
+            drone.position.y += (droneTargetY - drone.position.y) * 0.1;
+            drone.rotation.z = (drone.position.x - droneTargetX) * 0.1;
+
+            if (targetRing.position.z > -1 && targetRing.position.z < 1) {
+                const dist = Math.sqrt(Math.pow(drone.position.x - targetRing.position.x, 2) + Math.pow(drone.position.y - targetRing.position.y, 2));
+                if (dist < (2.0 * G_HOOP_SCALE)) { 
+                    score += 100;
+                    document.getElementById('stat-score').innerText = score;
+                    targetRing.material.color.setHex(0x10b981);
+                } else {
+                    targetRing.material.color.setHex(0xef4444);
+                }
+            }
+            if (targetRing.position.z > 5) {
+                targetRing.material.color.setHex(0x3b82f6);
+                respawnRing();
+            }
+
+            g_renderer.render(g_scene, g_camera);
+        }
+        animateGame();
 
         window.addEventListener('resize', () => {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            b_camera.aspect = b_container.clientWidth / b_container.clientHeight;
+            b_camera.updateProjectionMatrix(); b_renderer.setSize(b_container.clientWidth, b_container.clientHeight);
+            
+            g_camera.aspect = g_container.clientWidth / g_container.clientHeight;
+            g_camera.updateProjectionMatrix(); g_renderer.setSize(g_container.clientWidth, g_container.clientHeight);
         });
 
-        function animate3D() {
-            requestAnimationFrame(animate3D);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate3D();
 
-        // ==========================================
-        // 2. CHART.JS LIVE EEG GRAPH
-        // ==========================================
+        // ==============================================================================
+        // ENGINE 3: DATA GRAPH (Performance Optimized)
+        // ==============================================================================
         let totalTrials = 0; let correctTrials = 0;
         const ctx = document.getElementById('eegChart').getContext('2d');
         const chart = new Chart(ctx, {
@@ -207,124 +365,65 @@
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                responsive: true, maintainAspectRatio: false, 
+                animation: false, 
+                parsed: false, 
                 scales: { y: { grid: { color: '#334155' } }, x: { display: false } },
                 plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 12 } } },
-                elements: { line: { tension: 0.4 } }
+                elements: { line: { tension: 0 } } 
             }
         });
 
-        // ==========================================
-        // 3. GAME STATE & TARGET LOGIC
-        // ==========================================
-        let posX = 50, posY = 50;
-        let targetX = 80, targetY = 20;
-        let score = 0;
-        const STEP = 15;
         let ws;
-        let isProcessing = false; 
-
-        function spawnTarget() {
-            // Keep target away from edges
-            targetX = 15 + Math.random() * 70; 
-            targetY = 15 + Math.random() * 70;
-            const tz = document.getElementById('target-zone');
-            tz.style.left = `${targetX}%`;
-            tz.style.top = `${targetY}%`;
-        }
-        spawnTarget(); // Initial spawn
-
-        function setButtonState(disabled) {
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach(btn => {
-                btn.disabled = disabled;
-                if(disabled) {
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                } else {
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            });
-        }
-
-        // ==========================================
-        // 4. WEBSOCKET & VISUAL SCAFFOLDING NOVELTY
-        // ==========================================
         function connectWS() {
             ws = new WebSocket(`ws://${window.location.host}/ws`);
-            ws.onopen = () => {
-                const s = document.getElementById('ws-status');
-                s.innerText = "LINK ACTIVE"; s.className = "px-3 py-1 text-xs font-bold rounded bg-emerald-950 text-emerald-500 border border-emerald-800";
-            };
+            ws.onopen = () => { document.getElementById('ws-status').innerText = "LINK ACTIVE"; document.getElementById('ws-status').className = "px-3 py-1 text-xs font-bold rounded bg-emerald-950 text-emerald-500 border border-emerald-800"; };
             ws.onclose = () => setTimeout(connectWS, 2000);
 
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 if (!data.move_cmd) return;
 
-                const cursor = document.getElementById('cursor');
                 const confUI = document.getElementById('ui-conf');
 
                 if (data.move_cmd !== "CENTER") {
                     totalTrials++; if (data.match) correctTrials++;
                     document.getElementById('stat-trials').innerText = totalTrials;
                     document.getElementById('stat-acc').innerText = ((correctTrials / totalTrials) * 100).toFixed(1) + "%";
-
                     document.getElementById('ui-injected').innerText = data.injected_true;
                     document.getElementById('ui-decoded').innerText = data.prediction;
 
-                    // --- CINEMATIC FREEZE-FRAME ---
-                    isProcessing = true;
-                    setButtonState(true); 
-                    controls.autoRotate = false; 
-                    
-                    ambientLight.intensity = 0.1;
-                    dirLight.intensity = 0.2;
-
-                    const desc = document.getElementById('cortex-desc');
-                    const popIntensity = 4.0; 
-                    
-                    function activateNode(node) {
-                        node.mesh.material.opacity = 0.9; 
-                        node.light.intensity = popIntensity; 
-                    }
-
-                    if (data.target_class === 0) {
-                        activateNode(nodeC4);
-                        desc.innerHTML = "<span class='text-red-400 font-bold'>Right Motor Cortex</span> processing Left Hand intent.";
-                    } else if (data.target_class === 1) {
-                        activateNode(nodeC3);
-                        desc.innerHTML = "<span class='text-blue-400 font-bold'>Left Motor Cortex</span> processing Right Hand intent.";
-                    } else if (data.target_class === 2) {
-                        activateNode(nodeC3); activateNode(nodeC4);
-                        desc.innerHTML = "<span class='text-purple-400 font-bold'>Bilateral Motor Cortex</span> processing Up intent.";
-                    } else if (data.target_class === 3) {
-                        activateNode(nodeCz);
-                        desc.innerHTML = "<span class='text-emerald-400 font-bold'>Supplementary Motor Area</span> processing Down intent.";
-                    }
-
-                    setTimeout(() => {
-                        ambientLight.intensity = 0.8;
-                        dirLight.intensity = 2.5;
-                        controls.autoRotate = true; 
-                        
-                        allNodes.forEach(n => {
-                            n.mesh.material.opacity = 0.0;
-                            n.light.intensity = 0.0;
-                        });
-
-                        isProcessing = false;
-                        setButtonState(false);
-                        desc.innerHTML = "Awaiting EEG Injection...";
-                    }, 2000);
+                    let descText = "";
+                    if(data.target_class===0) descText = "<span class='text-red-400 font-bold'>Right Motor Cortex</span> - Left Intent";
+                    if(data.target_class===1) descText = "<span class='text-blue-400 font-bold'>Left Motor Cortex</span> - Right Intent";
+                    if(data.target_class===2) descText = "<span class='text-purple-400 font-bold'>Bilateral Cortex</span> - Up Intent";
+                    if(data.target_class===3) descText = "<span class='text-emerald-400 font-bold'>SMA</span> - Down Intent";
+                    flashBrainNode(data.target_class, descText);
 
                     chart.data.datasets[0].data = data.waveforms[0];
                     chart.data.datasets[1].data = data.waveforms[1];
                     chart.data.datasets[2].data = data.waveforms[2];
                     chart.update();
+                    
+                    // ==========================================
+                    // HYBRID AUTO-FATIGUE ENGINE
+                    // ==========================================
+                    let currentFatigue = parseFloat(fatigueCtrl.value);
+                    
+                    if (!data.match || data.confidence < G_ASSIST_THRESH) {
+                        currentFatigue += 3.5; 
+                    } else {
+                        currentFatigue -= 1.0; 
+                    }
+                    currentFatigue += 0.5; 
+                    
+                    currentFatigue = Math.max(0, Math.min(100, currentFatigue));
+                    fatigueCtrl.value = currentFatigue;
+                    updateClinicalState(); 
                 }
 
                 // ==========================================
-                // MAJOR NOVELTY: VECTOR-BLENDED SCAFFOLDING
+                // 3D DYNAMIC NEURAL SCAFFOLDING 
                 // ==========================================
                 const classToCmd = {0: "LEFT", 1: "RIGHT", 2: "UP", 3: "DOWN"};
                 const target_cmd = classToCmd[data.target_class]; 
@@ -334,90 +433,55 @@
                 let autoAssistForce = 0;
                 
                 if (data.move_cmd !== "CENTER") {
-                    if (data.confidence < 65.0 || !data.match) {
-                        
+                    if (data.confidence < G_ASSIST_THRESH || !data.match) {
                         userForce = data.match ? data.confidence : data.confidence * 0.3;
                         autoAssistForce = 100.0 - userForce; 
                         
-                        cursor.style.backgroundColor = '#f59e0b';
-                        cursor.style.borderColor = '#fcd34d';
-                        cursor.style.boxShadow = '0 0 25px rgba(245,158,11,1)';
-                        
-                        confUI.innerHTML = `
-                            <span class="text-amber-400">${data.confidence.toFixed(1)}%</span><br>
-                            <span class="text-[9px] text-amber-200 bg-amber-900 px-1.5 py-0.5 rounded border border-amber-700 tracking-wider">
-                            ⚙️ ASSIST VECTOR: +${autoAssistForce.toFixed(1)}% TO ${target_cmd}</span>
-                        `;
+                        droneMat.color.setHex(0xf59e0b); droneMat.emissive.setHex(0xf59e0b);
+                        confUI.innerHTML = `<span class="text-amber-400">${data.confidence.toFixed(1)}%</span><br><span class="text-[9px] text-amber-200 bg-amber-900 px-1.5 py-0.5 rounded border border-amber-700 tracking-wider">⚙️ ASSIST VECTOR: +${autoAssistForce.toFixed(1)}%</span>`;
                     } else {
                         userForce = data.confidence;
                         autoAssistForce = 0; 
                         
-                        cursor.style.backgroundColor = '#10b981';
-                        cursor.style.borderColor = '#6ee7b7';
-                        cursor.style.boxShadow = '0 0 25px rgba(16,185,129,1)';
-                        
-                        confUI.innerHTML = `
-                            <span class="text-emerald-400">${data.confidence.toFixed(1)}%</span><br>
-                            <span class="text-[9px] text-emerald-200 bg-emerald-900 px-1.5 py-0.5 rounded border border-emerald-700 tracking-wider">
-                            🧠 RAW NEURAL CONTROL</span>
-                        `;
+                        droneMat.color.setHex(0x10b981); droneMat.emissive.setHex(0x10b981);
+                        confUI.innerHTML = `<span class="text-emerald-400">${data.confidence.toFixed(1)}%</span><br><span class="text-[9px] text-emerald-200 bg-emerald-900 px-1.5 py-0.5 rounded border border-emerald-700 tracking-wider">🧠 RAW NEURAL CONTROL</span>`;
                     }
                 } else {
                     confUI.innerHTML = `--%`;
-                    cursor.style.backgroundColor = '#ef4444';
-                    cursor.style.borderColor = '#ffffff';
-                    cursor.style.boxShadow = '0 0 20px rgba(239,68,68,1)';
+                    droneMat.color.setHex(0xef4444); droneMat.emissive.setHex(0xef4444);
                 }
 
-                // --- Apply User's Raw Brain Vector ---
-                const userStep = STEP * (userForce / 100.0);
-                switch(predicted_cmd) {
-                    case "LEFT":  posX -= userStep; break;
-                    case "RIGHT": posX += userStep; break;
-                    case "UP":    posY -= userStep; break;
-                    case "DOWN":  posY += userStep; break;
-                    case "CENTER": posX = 50; posY = 50; break;
-                }
-
-                // --- Apply Game's Auto-Assist Vector ---
-                if (data.move_cmd !== "CENTER") {
-                    const assistStep = STEP * (autoAssistForce / 100.0);
-                    switch(target_cmd) {
-                        case "LEFT":  posX -= assistStep; break;
-                        case "RIGHT": posX += assistStep; break;
-                        case "UP":    posY -= assistStep; break;
-                        case "DOWN":  posY += assistStep; break;
-                    }
-                }
-
-                posX = Math.max(10, Math.min(90, posX));
-                posY = Math.max(10, Math.min(90, posY));
+                const DRONE_STEP = 4.0; 
                 
-                cursor.style.left = `${posX}%`;
-                cursor.style.top = `${posY}%`;
+                const userStep = DRONE_STEP * (userForce / 100.0);
+                switch(predicted_cmd) {
+                    case "LEFT":  droneTargetX -= userStep; break;
+                    case "RIGHT": droneTargetX += userStep; break;
+                    case "UP":    if(!G_1D_MODE) droneTargetY += userStep; break; 
+                    case "DOWN":  if(!G_1D_MODE) droneTargetY -= userStep; break;
+                    case "CENTER": droneTargetX = 0; droneTargetY = 0; break;
+                }
 
-                // --- COLLISION DETECTION (Hit the Target!) ---
                 if (data.move_cmd !== "CENTER") {
-                    const dist = Math.sqrt(Math.pow(posX - targetX, 2) + Math.pow(posY - targetY, 2));
-                    if (dist < 12.0) { // Collision radius
-                        score += 100;
-                        document.getElementById('stat-score').innerText = score;
-                        
-                        // Flash cursor green to indicate a hit
-                        cursor.style.transform = "translate(-50%, -50%) scale(1.4)";
-                        setTimeout(() => { cursor.style.transform = "translate(-50%, -50%) scale(1)"; }, 200);
-                        
-                        spawnTarget();
+                    const assistStep = DRONE_STEP * (autoAssistForce / 100.0);
+                    switch(target_cmd) {
+                        case "LEFT":  droneTargetX -= assistStep; break;
+                        case "RIGHT": droneTargetX += assistStep; break;
+                        case "UP":    if(!G_1D_MODE) droneTargetY += assistStep; break;
+                        case "DOWN":  if(!G_1D_MODE) droneTargetY -= assistStep; break;
                     }
                 }
+
+                droneTargetX = Math.max(-6, Math.min(6, droneTargetX));
+                droneTargetY = Math.max(-4, Math.min(4, droneTargetY));
             };
         }
 
         function cmd(action) {
-            if (isProcessing) return; 
             if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: action }));
         }
 
+        updateClinicalState();
         connectWS();
     </script>
 </body>
