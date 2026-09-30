@@ -86,9 +86,18 @@ async def bci_stream(websocket: WebSocket):
                 await websocket.send_json(response)
             elif command == "RESET":
                 await websocket.send_json({"move_cmd": "CENTER"})
+
+            if command == "RESET":
+             await websocket.send_json({
+                 "move_cmd": "CENTER",
+                 "match": True,
+                 "confidence": 100.0
+             })
+            continue
                 
     except WebSocketDisconnect:
         pass
+
 
 if __name__ == "__main__":
     uvicorn.run("web_server:app", host="127.0.0.1", port=8000, reload=True)
